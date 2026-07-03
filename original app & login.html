@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Portal — Manager & Employee</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --panel:#111827; /* gray-900 */
+      --muted:#1f2937; /* gray-800 */
+      --card:#0b1220; /* custom */
+      --text:#e5e7eb; /* gray-200 */
+      --sub:#9ca3af;  /* gray-400 */
+      --brand:#2563eb; /* blue-600 */
+      --accent:#22c55e; /* green-500 */
+      --danger:#ef4444; /* red-500 */
+      --warning:#f59e0b; /* amber-500 */
+      --ring:#3b82f6; /* blue-500 */
+      --ok:#10b981; /* green-500 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,.08), transparent),
+                 radial-gradient(900px 500px at 120% 10%, rgba(34,197,94,.06), transparent),
+                 var(--bg);
+      color:var(--text);
+    }
+    a{color:inherit}
+    .wrap{max-width:1200px; margin:0 auto; padding:28px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+          border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .brand{display:flex; align-items:center; gap:10px}
+    .brand .logo{width:38px; height:38px; border-radius:10px; display:grid; place-items:center;
+                 background:conic-gradient(from 120deg, var(--brand), #8b5cf6, #06b6d4, var(--brand));
+                 box-shadow:0 4px 18px rgba(59,130,246,.45)}
+    .brand b{letter-spacing:.4px}
+    header{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px}
+
+    /* Auth */
+    #auth{display:grid; grid-template-columns:1.1fr .9fr; gap:28px; align-items:stretch}
+    .hero{min-height:460px; background:linear-gradient(160deg,rgba(59,130,246,.09),rgba(34,197,94,.06));
+          border-radius:16px; border:1px solid rgba(255,255,255,.06); padding:28px; display:flex; flex-direction:column; justify-content:center}
+    .hero h1{margin:0 0 10px; font-size:34px}
+    .hero p{color:var(--sub)}
+    .login .tabs{display:flex; gap:6px; background:rgba(255,255,255,.04); border-radius:12px; padding:6px}
+    .login .tabs button{flex:1; padding:12px 10px; border:0; border-radius:10px; cursor:pointer; color:var(--text);
+                        background:transparent; font-weight:600}
+    .login .tabs button.active{background:var(--brand); box-shadow:0 8px 22px rgba(37,99,235,.35)}
+    .login form{display:grid; gap:12px; margin-top:14px}
+    input,select,textarea{width:100%; padding:12px 14px; border-radius:10px; background:#0b1220; color:var(--text); border:1px solid rgba(255,255,255,.09)}
+    input:focus,select:focus,textarea:focus{outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    .btn{padding:12px 14px; border-radius:10px; border:0; color:white; font-weight:700; cursor:pointer}
+    .btn.brand{background:linear-gradient(135deg, #2563eb, #7c3aed)}
+    .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.12)}
+    .muted{color:var(--sub); font-size:12px}
+
+    /* App Shell */
+    #app{display:none}
+    .shell{display:grid; grid-template-columns:250px 1fr; gap:18px}
+    nav{background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:14px; position:sticky; top:18px; height:calc(100vh - 120px)}
+    nav h3{margin:10px 8px; font-size:13px; color:var(--sub); text-transform:uppercase; letter-spacing:.12em}
+    .menu{display:grid; gap:6px}
+    .menu button{justify-content:flex-start; width:100%; display:flex; gap:10px; align-items:center; padding:10px 12px; border-radius:10px; border:0; background:transparent; color:var(--text); cursor:pointer}
+    .menu button.active{background:rgba(59,130,246,.16); border:1px solid rgba(59,130,246,.35)}
+    .tag{font-size:12px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.08); color:var(--sub)}
+
+    main{display:grid; gap:18px}
+    .grid{display:grid; grid-template-columns:repeat(12, 1fr); gap:14px}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
+    .col-8{grid-column:span 8}
+    .col-12{grid-column:span 12}
+
+    table{width:100%; border-collapse:collapse;}
+    th,td{padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06); text-align:left}
+    th{color:#cbd5e1; font-size:13px; text-transform:uppercase; letter-spacing:.08em}
+    tr:hover td{background:rgba(255,255,255,.02)}
+
+    .status{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px}
+    .status.ok{background:rgba(16,185,129,.15); color:#34d399}
+    .status.pending{background:rgba(245,158,11,.15); color:#fbbf24}
+    .status.bad{background:rgba(239,68,68,.15); color:#f87171}
+    .pill{padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.06); font-size:12px}
+
+    .toolbar{display:flex; gap:10px; flex-wrap:wrap}
+    .toolbar .btn{padding:10px 12px}
+
+    iframe.meetframe{width:100%; height:600px; border:0; border-radius:12px; overflow:hidden}
+
+    .footnote{color:var(--sub); font-size:12px}
+
+    @media (max-width: 980px){
+      #auth{grid-template-columns:1fr}
+      .shell{grid-template-columns:1fr}
+      nav{position:relative; height:auto}
+      .row{grid-template-columns:1fr}
+      .col-4,.col-6,.col-8{grid-column:span 12}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><div class="logo">🏢</div><b>Company Portal</b></div>
+      <div id="whoami" class="tag">Not signed in</div>
+    </header>
+
+    <!-- AUTH -->
+    <section id="auth">
+      <div class="hero">
+        <h1>All-in-one workspace for Managers & Employees</h1>
+        <p>Login as <b>Manager</b> to view dashboards, employee directory, start meetings, and track assignments. Login as <b>Employee</b> to view performance, join meetings, follow task instructions, and export deliverables.</p>
+        <ul>
+          <li>Professional UI, responsive design</li>
+          <li>No external API keys required</li>
+          <li>Data persists locally (localStorage)</li>
+          <li>Meeting buttons open your <b>existing HTML files</b> (unmodified)</li>
+        </ul>
+      </div>
+      <div class="card login">
+        <div class="tabs">
+          <button id="tabManager" class="active" onclick="setRole('manager')">Manager</button>
+          <button id="tabEmployee" onclick="setRole('employee')">Employee</button>
+        </div>
+        <form onsubmit="login(event)" autocomplete="on">
+          <div class="row">
+            <div>
+              <label>Work Email</label>
+              <input id="email" type="email" placeholder="name@company.com" required />
+            </div>
+            <div>
+              <label>Password</label>
+              <input id="password" type="password" placeholder="••••••••" required />
+            </div>
+          </div>
+          <button type="submit" class="btn brand">Sign in</button>
+          <p class="muted">Demo accounts are pre-filled in the directory. Any matching email/password from the directory will log you in.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- APP -->
+    <section id="app">
+      <div class="shell">
+        <nav>
+          <div class="brand" style="margin:6px 6px 12px 6px"><div class="logo" style="transform:scale(.8)">📊</div><b id="roleTitle">Manager</b></div>
+          <h3>Navigation</h3>
+          <div class="menu" id="menuManager">
+            <button data-view="m-dashboard" class="active">🏠 Dashboard</button>
+            <button data-view="m-employees">👥 Employees</button>
+            <button data-view="m-meeting">🎥 Start Meeting</button>
+            <button data-view="m-assignments">📝 Assignments</button>
+          </div>
+          <div class="menu" id="menuEmployee" style="display:none">
+            <button data-view="e-dashboard" class="active">🏠 Dashboard</button>
+            <button data-view="e-meeting">🎥 Join Meeting</button>
+            <button data-view="e-tasks">✅ My Tasks</button>
+          </div>
+        </nav>
+        <main>
+          <!-- MANAGER VIEWS -->
+          <section id="m-dashboard" class="card">
+            <h2 style="margin-top:0">Manager Dashboard</h2>
+            <div class="grid">
+              <div class="col-4 card">
+                <h3>Manager Details</h3>
+                <div id="managerDetails"></div>
+              </div>
+              <div class="col-8 card">
+                <h3>Achievements</h3>
+                <ul id="managerAchievements" style="line-height:1.9"></ul>
+              </div>
+              <div class="col-12 card">
+                <h3>Team Snapshot</h3>
+                <div id="teamSnapshot" class="grid"></div>
+              </div>
+            </div>
+          </section>
+
+          <section id="m-employees" class="card" style="display:none">
+            <div style="display:flex; align-items:center; justify-content:space-between">
+              <h2 style="margin:0">Employee Directory</h2>
+              <span class="pill" id="empCount">0 Employees</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th><th>Age</th><th>Role</th><th>Date of Joining</th><th>Email</th><th>Phone</th><th>Location</th>
+                </tr>
+              </thead>
+              <tbody id="empTable"></tbody>
+            </table>
+          </section>
+
+          <section id="m-meeting" class="card" style="display:none">
+            <h2 style="margin-top:0">Start Meeting</h2>
+            <p class="footnote">This button opens <b>your existing meeting HTML</b> in a new tab. <u>We do not modify your code</u>. Place your file as <code>meeting.html</code> in the same folder as this page.</p>
+            <div class="toolbar">
+              <button class="btn brand" onclick="window.open('meeting.html','_blank')">🎥 Open Meeting (your file)</button>
+              <button class="btn ghost" onclick="window.open('summarizer.html','_blank')">📝 Open Transcript Summarizer (your file)</button>
+            </div>
+          </section>
+
+          <section id="m-assignments" class="card" style="display:none">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+              <h2 style="margin:0">Post-Meeting — Task Table</h2>
+              <span class="footnote">Add tasks after a meeting. Status updates to <b>✅</b> when employees mark completion.</span>
+            </div>
+            <div class="card" style="margin-top:12px">
+              <form class="row" onsubmit="addTask(event)">
+                <div>
+                  <label>Employee</label>
+                  <select id="taskEmp"></select>
+                </div>
+                <div>
+                  <label>Task</label>
+                  <input id="taskTitle" placeholder="e.g., Prepare Q4 Sales Report" required>
+                </div>
+                <div>
+                  <label>Deadline</label>
+                  <input id="taskDeadline" type="date" required>
+                </div>
+                <div>
+                  <label>&nbsp;</label>
+                  <button class="btn brand" type="submit">➕ Add Task</button>
+                </div>
+              </form>
+            </div>
+
+            <table style="margin-top:12px">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Task</th>
+                  <th>Deadline</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="taskTable"></tbody>
+            </table>
+          </section>
+
+          <!-- EMPLOYEE VIEWS -->
+          <section id="e-dashboard" class="card" style="display:none">
+            <h2 style="margin-top:0">Employee Dashboard</h2>
+            <div class="grid">
+              <div class="col-6 card">
+                <h3>Performance Overview</h3>
+                <ul id="perfOverview" style="line-height:1.9; margin:0">
+                  <!-- Filled on login -->
+                </ul>
+              </div>
+              <div class="col-6 card">
+                <h3>Current Assignments</h3>
+                <ul id="myAssignments" style="line-height:1.9; margin:0"></ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="e-meeting" class="card" style="display:none">
+            <h2 style="margin-top:0">Join Meeting</h2>
+            <p class="footnote">This opens <b>your meeting HTML</b>. Save your file as <code>meeting.html</code>. We do not alter it.</p>
+            <div class="toolbar">
+              <button class="btn brand" onclick="window.open('meeting.html','_blank')">🎥 Open Meeting (your file)</button>
+              <button class="btn ghost" onclick="window.open('summarizer.html','_blank')">📝 Open Transcript Summarizer (your file)</button>
+            </div>
+          </section>
+
+          <section id="e-tasks" class="card" style="display:none">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap">
+              <h2 style="margin:0">My Task Instructions</h2>
+              <span class="footnote">Fill steps, then export PPT / Report. Mark complete to update Manager status to ✅.</span>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Deadline</th>
+                  <th>Instructions / Steps</th>
+                  <th>Export</th>
+                  <th>Done</th>
+                </tr>
+              </thead>
+              <tbody id="myTaskTable"></tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </section>
+  </div>
+
+  <!-- Libraries for exports (no API keys) -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <script>
+    /********************** Demo Data ************************/
+    const demoManager = {
+      name: 'Ananya Rao', email: 'ananya@company.com', phone: '+91 90000 12345',
+      department: 'Product Management', location: 'Bengaluru, IN'
+    };
+
+    const demoAchievements = [
+      'Launched "Aurora" release (on-time, under budget)',
+      'Improved sprint velocity by 18% QoQ',
+      'Mentored 6 APMs across 3 verticals'
+    ];
+
+    const demoEmployees = [
+      { id:'E001', name:'Tejas KN', age:22, role:'Software Engineer', doj:'2023-07-01', email:'tejas@company.com', phone:'+91 98765 43210', location:'Bengaluru', perf:{onTimeRate:92, quality:4.6, meetings:34}},
+      { id:'E002', name:'Ritika Sharma', age:24, role:'QA Engineer', doj:'2024-02-12', email:'ritika@company.com', phone:'+91 99876 54321', location:'Mysuru', perf:{onTimeRate:88, quality:4.4, meetings:27}},
+      { id:'E003', name:'Arjun Mehta', age:25, role:'UI/UX Designer', doj:'2023-11-20', email:'arjun@company.com', phone:'+91 91234 56780', location:'Hubballi', perf:{onTimeRate:90, quality:4.5, meetings:30}},
+      { id:'E004', name:'Neha Patil', age:23, role:'Data Analyst', doj:'2024-04-05', email:'neha@company.com', phone:'+91 90123 45678', location:'Mangaluru', perf:{onTimeRate:86, quality:4.3, meetings:25}}
+    ];
+
+    const seedTasks = [
+      // { id, empId, title, deadline, steps, status }
+      { id: 'T001', empId:'E001', title:'Build meeting auto-join prototype', deadline: '2025-11-12', steps: ['Scaffold UI', 'Integrate Jitsi buttons', 'LocalStorage sync'], status:'pending' },
+      { id: 'T002', empId:'E002', title:'Write regression test suite', deadline: '2025-11-15', steps: ['Identify critical paths', 'Add Playwright tests'], status:'pending' }
+    ];
+
+    /********************** State & Storage ************************/
+    function loadState(){
+      const employees = JSON.parse(localStorage.getItem('employees')||'null') || demoEmployees;
+      const tasks     = JSON.parse(localStorage.getItem('tasks')||'null') || seedTasks;
+      localStorage.setItem('employees', JSON.stringify(employees));
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      return {employees, tasks};
+    }
+    function saveTasks(tasks){ localStorage.setItem('tasks', JSON.stringify(tasks)); }
+
+    let STATE = { role:'manager', user:null, ...loadState() };
+
+    /********************** Auth ************************/
+    function setRole(role){
+      STATE.role = role;
+      document.getElementById('tabManager').classList.toggle('active', role==='manager');
+      document.getElementById('tabEmployee').classList.toggle('active', role==='employee');
+    }
+    function findUserByEmail(email){
+      if(STATE.role==='manager'){
+        // simple demo: manager is the single demo manager
+        return (email===demoManager.email)? { ...demoManager, role:'manager', password:'manager123' } : null;
+      }
+      return STATE.employees.find(e=>e.email===email);
+    }
+    function login(ev){
+      ev.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const pass  = document.getElementById('password').value.trim();
+      const user  = findUserByEmail(email);
+      if(!user){ alert('User not found in directory. Use a demo email from the directory table.'); return; }
+      // demo passwords: manager123 or lowercase first name + 123
+      const expected = (STATE.role==='manager')? 'manager123' : (user.name.split(' ')[0].toLowerCase()+"123");
+      if(pass!==expected){ alert('Incorrect password. Hint: manager123 or firstname123'); return; }
+      STATE.user = { ...user, role:STATE.role };
+      document.getElementById('whoami').textContent = `${user.name} — ${STATE.role.toUpperCase()}`;
+      document.getElementById('roleTitle').textContent = (STATE.role==='manager')? 'Manager' : 'Employee';
+      document.getElementById('auth').style.display='none';
+      document.getElementById('app').style.display='block';
+      document.getElementById('menuManager').style.display = (STATE.role==='manager')? 'grid' : 'none';
+      document.getElementById('menuEmployee').style.display = (STATE.role==='employee')? 'grid' : 'none';
+      initViews();
+    }
+
+    /********************** UI Routing ************************/
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('nav .menu button');
+      if(!btn) return;
+      const viewId = btn.getAttribute('data-view');
+      document.querySelectorAll('nav .menu button').forEach(b=>b.classList.toggle('active', b===btn));
+      document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
+      document.getElementById(viewId).style.display='block';
+      if(viewId==='m-assignments') renderTaskTable();
+      if(viewId==='e-tasks') renderMyTasks();
+    })
+
+    /********************** Manager Views ************************/
+    function initManagerDashboard(){
+      const d = document.getElementById('managerDetails');
+      d.innerHTML = `
+        <div><b>Name:</b> ${demoManager.name}</div>
+        <div><b>Email:</b> ${demoManager.email}</div>
+        <div><b>Phone:</b> ${demoManager.phone}</div>
+        <div><b>Department:</b> ${demoManager.department}</div>
+        <div><b>Location:</b> ${demoManager.location}</div>
+      `;
+      const ul = document.getElementById('managerAchievements');
+      ul.innerHTML = demoAchievements.map(a => `<li>${a}</li>`).join('');
+      const team = document.getElementById('teamSnapshot');
+      // create small cards for each employee
+      team.innerHTML = STATE.employees.map(emp=>`
+        <div class="card" style="padding:12px; grid-column: span 3;">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <b>${emp.name}</b>
+            <span class="pill">${emp.role}</span>
+          </div>
+          <div class="muted">Joined ${emp.doj} · ${emp.location}</div>
+          <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap">
+            <span class="status ok">On-time ${emp.perf.onTimeRate}%</span>
+            <span class="status pending">Quality ★${emp.perf.quality}</span>
+            <span class="status">Meetings ${emp.perf.meetings}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderEmployees(){
+      document.getElementById('empCount').textContent = `${STATE.employees.length} Employees`;
+      const tbody = document.getElementById('empTable');
+      tbody.innerHTML = STATE.employees.map(e=>`
+        <tr>
+          <td>${e.name}</td>
+          <td>${e.age}</td>
+          <td>${e.role}</td>
+          <td>${e.doj}</td>
+          <td>${e.email}</td>
+          <td>${e.phone}</td>
+          <td>${e.location}</td>
+        </tr>
+      `).join('');
+      // Fill select in task form
+      const sel = document.getElementById('taskEmp');
+      sel.innerHTML = STATE.employees.map(e=>`<option value="${e.id}">${e.name} — ${e.role}</option>`).join('');
+    }
+
+    function addTask(ev){
+      ev.preventDefault();
+      const empId = document.getElementById('taskEmp').value;
+      const title = document.getElementById('taskTitle').value.trim();
+      const deadline = document.getElementById('taskDeadline').value;
+      if(!title||!deadline) return;
+      const id = 'T' + Math.random().toString(36).slice(2,7).toUpperCase();
+      const tasks = JSON.parse(localStorage.getItem('tasks'))||[];
+      tasks.push({ id, empId, title, deadline, steps:[], status:'pending' });
+      saveTasks(tasks); STATE.tasks = tasks;
+      document.getElementById('taskTitle').value='';
+      renderTaskTable();
+      alert('Task added. Employee will see it under My Tasks.');
+    }
+
+    function renderTaskTable(){
+      const tbody = document.getElementById('taskTable');
+      const tasks = JSON.parse(localStorage.getItem('tasks'))||[];
+      tbody.innerHTML = tasks.map(t=>{
+        const emp = STATE.employees.find(e=>e.id===t.empId) || {name:'—'};
+        const statusIcon = t.status==='done' ? '✅' : (t.status==='wrong' ? '❌' : '⏳');
+        return `
+          <tr>
+            <td>${emp.name}</td>
+            <td>${t.title}</td>
+            <td>${t.deadline}</td>
+            <td><span class="status ${t.status==='done'?'ok':(t.status==='wrong'?'bad':'pending')}">${statusIcon} ${t.status}</span></td>
+            <td>
+              <button class="btn ghost" onclick="setTaskStatus('${t.id}','done')">✔ Mark Right</button>
+              <button class="btn ghost" onclick="setTaskStatus('${t.id}','wrong')">✖ Mark Wrong</button>
+              <button class="btn ghost" onclick="deleteTask('${t.id}')">🗑 Delete</button>
+            </td>
+          </tr>`
+      }).join('');
+    }
+    function setTaskStatus(id,status){
+      const tasks = JSON.parse(localStorage.getItem('tasks'))||[];
+      const t = tasks.find(x=>x.id===id); if(!t) return;
+      t.status = status; saveTasks(tasks); STATE.tasks = tasks; renderTaskTable();
+    }
+    function deleteTask(id){
+      let tasks = JSON.parse(localStorage.getItem('tasks'))||[];
+      tasks = tasks.filter(t=>t.id!==id); saveTasks(tasks); STATE.tasks = tasks; renderTaskTable();
+    }
+
+    /********************** Employee Views ************************/
+    function initEmployeeDashboard(){
+      const perf = document.getElementById('perfOverview');
+      const me = STATE.user;
+      if(!me){ perf.innerHTML = '<li class="muted">No user data</li>'; return; }
+      const dir = STATE.employees.find(e=>e.email===me.email) || me;
+      perf.innerHTML = `
+        <li><b>Name:</b> ${dir.name}</li>
+        <li><b>Role:</b> ${dir.role}</li>
+        <li><b>On-time rate:</b> ${dir.perf?.onTimeRate ?? 90}%</li>
+        <li><b>Quality:</b> ★${dir.perf?.quality ?? 4.5}</li>
+        <li><b>Meetings attended:</b> ${dir.perf?.meetings ?? 20}</li>
+      `;
+      const my = document.getElementById('myAssignments');
+      const tasks = (JSON.parse(localStorage.getItem('tasks'))||[]).filter(t=>t.empId===dir.id);
+      if(!tasks.length){ my.innerHTML = '<li class="muted">No assignments yet.</li>'; return; }
+      my.innerHTML = tasks.map((t)=>`<li>${t.title} — <span class="pill">${t.deadline}</span> <span class="status ${t.status==='done'?'ok':'pending'}">${t.status==='done'?'✅ done':'⏳ pending'}</span></li>`).join('');
+    }
+
+    function renderMyTasks(){
+      const me = STATE.user;
+      if(!me) return;
+      const dir = STATE.employees.find(e=>e.email===me.email) || me;
+      const tbody = document.getElementById('myTaskTable');
+      const tasks = (JSON.parse(localStorage.getItem('tasks'))||[]).filter(t=>t.empId===dir.id);
+      tbody.innerHTML = tasks.map(t=>{
+        const stepsText = (t.steps||[]).join('\n');
+        return `
+          <tr>
+            <td>${t.title}</td>
+            <td>${t.deadline}</td>
+            <td>
+              <textarea id="steps_${t.id}" rows="4" placeholder="Write clear execution steps...">${stepsText}</textarea>
+            </td>
+            <td>
+              <button class="btn ghost" onclick="exportPPT('${t.id}')">📑 PPT</button>
+              <button class="btn ghost" onclick="exportReport('${t.id}')">📄 Report</button>
+            </td>
+            <td>
+              <button class="btn brand" onclick="markDone('${t.id}')">✅ Complete</button>
+            </td>
+          </tr>`
+      }).join('');
+    }
+
+    function markDone(id){
+      const tasks = JSON.parse(localStorage.getItem('tasks'))||[];
+      const t = tasks.find(x=>x.id===id); if(!t) return;
+      const ta = document.getElementById('steps_'+id);
+      const steps = (ta?.value||'').split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      t.steps = steps; t.status='done';
+      saveTasks(tasks); STATE.tasks = tasks;
+      renderMyTasks();
+      initEmployeeDashboard();
+      alert('Marked complete. Manager view will show ✅ Right.');
+    }
+
+    async function exportReport(id){
+      const { jsPDF } = window.jspdf;
+      const tasks = JSON.parse(localStorage.getItem('tasks'))||[];
+      const t = tasks.find(x=>x.id===id); if(!t) return;
+      const emp = STATE.employees.find(e=>e.id===t.empId) || {name:'Employee'};
+      const doc = new jsPDF();
+      doc.setFont('helvetica','bold'); doc.setFontSize(16);
+      doc.text('Task Completion Report', 20, 20);
+      doc.setFontSize(11); doc.setFont('helvetica','normal');
+      const lines = [
+        `Employee: ${emp.name}`,
+        `Task: ${t.title}`,
+        `Deadline: ${t.deadline}`,
+        `Status: ${t.status.toUpperCase()}`,
+        '',
+        'Steps:'
+      ];
+      if(t.steps && t.steps.length){
+        t.steps.forEach((s,i)=> lines.push(`${i+1}. ${s}`));
+      } else {
+        lines.push('(no steps noted)');
+      }
+      let y=32;
+      lines.forEach(l=>{ doc.text(String(l), 20, y); y+=8; });
+      // sanitize file name
+      const safeName = emp.name.replace(/\s+/g,'_').replace(/[^\w_-]/g,'');
+      doc.save(`Report_${safeName}_${t.id}.pdf`);
+    }
+
+    async function exportPPT(id){
+      const t = (JSON.parse(localStorage.getItem('tasks'))||[]).find(x=>x.id===id); if(!t) return;
+      const emp = STATE.employees.find(e=>e.id===t.empId) || {name:'Employee'};
+      const pptx = new PptxGenJS();
+      pptx.title = `Task — ${t.title}`;
+      const titleSlide = pptx.addSlide();
+      titleSlide.addText('Task Summary', { x:0.5, y:0.5, fontSize:28, bold:true });
+      titleSlide.addText(`Employee: ${emp.name}`, { x:0.5, y:1.4, fontSize:18 });
+      titleSlide.addText(`Task: ${t.title}`, { x:0.5, y:1.9, fontSize:18 });
+      titleSlide.addText(`Deadline: ${t.deadline}`, { x:0.5, y:2.4, fontSize:18 });
+      const stepsSlide = pptx.addSlide();
+      stepsSlide.addText('Execution Steps', { x:0.5, y:0.5, fontSize:24, bold:true });
+      const steps = (t.steps && t.steps.length)? t.steps : ['(no steps noted)'];
+      stepsSlide.addText(steps.map((s,i)=>`${i+1}. ${s}`), { x:0.7, y:1.2, fontSize:18, bullet:true, lineSpacingMultiple:1.2 });
+      const statusSlide = pptx.addSlide();
+      statusSlide.addText('Status', { x:0.5, y:0.5, fontSize:24, bold:true });
+      statusSlide.addText(t.status==='done'?'✅ Completed':'⏳ Pending', { x:0.7, y:1.2, fontSize:36 });
+      const safeName = emp.name.replace(/\s+/g,'_').replace(/[^\w_-]/g,'');
+      await pptx.writeFile({ fileName: `Task_${t.id}_${safeName}.pptx` });
+    }
+
+    /********************** Init ************************/
+    function initViews(){
+      if(STATE.role==='manager'){
+        // show first manager view
+        document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
+        document.getElementById('m-dashboard').style.display='block';
+        document.querySelectorAll('#menuManager button').forEach((b,i)=>b.classList.toggle('active', i===0));
+        initManagerDashboard();
+        renderEmployees();
+        renderTaskTable();
+      } else {
+        document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
+        document.getElementById('e-dashboard').style.display='block';
+        document.querySelectorAll('#menuEmployee button').forEach((b,i)=>b.classList.toggle('active', i===0));
+        initEmployeeDashboard();
+        renderMyTasks();
+      }
+    }
+
+    // Prefill storage on first load
+    window.addEventListener('load', ()=>{
+      // ensure storage exists
+      loadState();
+      // convenience for testing
+      document.getElementById('email').value = 'ananya@company.com';
+      document.getElementById('password').value = 'manager123';
+    });
+  </script>
+</body>
+</html>

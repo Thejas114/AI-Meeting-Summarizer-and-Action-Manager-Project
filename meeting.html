@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Jitsi Meeting + Audio Extract + Transcription</title>
+<style>
+body { font-family:Arial; background:#0F1626; color:white; margin:0;padding:20px; }
+#meet { width:100%; height:600px; border-radius:10px; overflow:hidden; background:black; margin-top:20px; }
+input,button { padding:10px;border-radius:6px;border:none;margin:5px;font-size:15px; }
+input{width:230px;}
+button{background:#2C89FC;color:white;cursor:pointer;}
+button:hover{opacity:.8}
+button:disabled{background:#555;cursor:not-allowed;}
+#status {background:#1a1a2e;padding:15px;border-radius:8px;margin-top:20px;}
+.recording {animation:pulse 1.5s infinite;}
+@keyframes pulse {0%,100%{opacity:1} 50%{opacity:.5}}
+.info-box {background:#2d3748;padding:12px;border-radius:6px;margin:10px 0;border-left:4px solid #f59e0b;}
+.method-btn {background:#10b981;margin:5px;}
+.method-btn:hover {opacity:0.85;}
+#transcription {background:#1a1a2e;padding:20px;border-radius:8px;margin-top:20px;max-height:400px;overflow-y:auto;}
+.transcript-line {padding:8px;margin:5px 0;background:#2d3748;border-radius:4px;border-left:3px solid #3b82f6;}
+.transcript-time {color:#60a5fa;font-size:12px;margin-right:10px;}
+#liveTranscript {color:#10b981;font-style:italic;padding:10px;background:#1a2e1a;border-radius:6px;margin-top:10px;}
+</style>
+</head>
+<body>
+
+<h2>🎥 Jitsi Meeting Host + Audio Recorder + Live Transcription</h2>
+
+<input id="room" placeholder="room name example: ai-team-01">
+<button onclick="startMeeting()">Start Meeting</button>
+
+<div id="meet"></div>
+
+<div id="status">
+  <h3 style="margin-top:0">🎤 Audio Recording Methods</h3>
+  
+  <div class="info-box">
+    <strong>📌 IMPORTANT:</strong> When the popup appears, you MUST:
+    <ul style="margin:5px 0;padding-left:20px;">
+      <li>Select "<strong>Chrome Tab</strong>" (or your browser tab)</li>
+      <li>✅ <strong>CHECK the "Share tab audio" or "Share audio" checkbox</strong></li>
+      <li>Click "Share"</li>
+    </ul>
+  </div>
+
+  <button class="method-btn" onclick="startRecordingTabAudio()">🎯 Method 1: Record Tab Audio (Recommended)</button>
+  <button class="method-btn" onclick="startRecordingMicOnly()">🎤 Method 2: Record Microphone + Live Transcription</button>
+  <button id="stopBtn" onclick="stopRecording()" disabled style="background:#ef4444;">⏹ Stop Recording</button>
+  <button id="downloadBtn" onclick="downloadTranscript()" disabled style="background:#8b5cf6;">📥 Download Transcript</button>
+  
+  <p id="recordStatus" style="margin-top:15px;font-size:14px;padding:10px;background:#1a1a2e;border-radius:6px;">Status: Not recording</p>
+</div>
+
+<div id="transcription" style="display:none;">
+  <h3 style="margin-top:0;">📝 Live Transcription</h3>
+  <div id="liveTranscript">Listening...</div>
+  <div id="transcriptHistory"></div>
+</div>
+
+<script src="https://meet.jit.si/external_api.js"></script>
+<script>
+let api;
+let mediaRecorder;
+let recordedChunks = [];
+let recordingStream;
+let recognition;
+let transcriptLines = [];
+let isTranscribing = false;
+
+function startMeeting(){
+    const roomName = document.getElementById("room").value || "defaultRoom001";
+    api = new JitsiMeetExternalAPI("meet.jit.si", {
+        parentNode: document.getElementById("meet"),
+        roomName: roomName,
+        configOverrides: {
+            startWithAudioMuted: false,
+            startWithVideoMuted: false
+        }
+    });
+    document.getElementById("recordStatus").innerHTML = "✅ Meeting started! Choose a recording method above.";
+    document.querySelector("button[onclick='startMeeting()']").disabled = true;
+}
+
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("⚠ Your browser doesn't support speech recognition. Live transcription won't work.\n\nPlease use Chrome or Edge for this feature.");
+        return null;
+    }
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                const finalTranscript = transcript.trim();
+                const timestamp = new Date().toLocaleTimeString();
+
+                transcriptLines.push({ time: timestamp, text: finalTranscript });
+
+                const historyDiv = document.getElementById('transcriptHistory');
+                const line = document.createElement('div');
+                line.className = 'transcript-line';
+                line.innerHTML = `<span class="transcript-time">[${timestamp}]</span>${finalTranscript.replace(/</g, "&lt;")}`;
+                historyDiv.appendChild(line);
+
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+
+                document.getElementById('liveTranscript').textContent = 'Listening...';
+            } else {
+                interimTranscript += transcript;
+                document.getElementById('liveTranscript').textContent = interimTranscript || 'Listening...';
+            }
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'no-speech' && isTranscribing) {
+            recognition.start();
+        }
+    };
+
+    recognition.onend = () => {
+        if (isTranscribing) recognition.start();
+    };
+
+    return recognition;
+}
+
+async function startRecordingTabAudio(){
+    try {
+        document.getElementById("recordStatus").innerHTML = "⏳ Waiting for screen share selection... <strong>CHECK 'Share tab audio'!</strong>";
+        
+        recordingStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true,
+            preferCurrentTab: true
+        });
+
+        const audioTracks = recordingStream.getAudioTracks();
+        const videoTracks = recordingStream.getVideoTracks();
+        
+        if (audioTracks.length === 0) {
+            recordingStream.getTracks().forEach(track => track.stop());
+            document.getElementById("recordStatus").innerHTML =
+              "❌ <strong>NO AUDIO DETECTED!</strong><br>You forgot to check 'Share tab audio'!";
+            return;
+        }
+
+        const audioOnlyStream = new MediaStream(audioTracks);
+        let mimeType = 'audio/webm;codecs=opus';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'audio/webm';
+        
+        mediaRecorder = new MediaRecorder(audioOnlyStream, { mimeType });
+        recordedChunks = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jitsi-meeting-${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            document.getElementById("recordStatus").innerHTML =
+              "✅ Recording saved! Note: Tab audio cannot be transcribed in real-time.<br>Use Method 2 for live transcription.";
+            document.getElementById("recordStatus").classList.remove("recording");
+        };
+
+        if (videoTracks[0]) {
+            videoTracks[0].onended = () => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') stopRecording();
+            };
+        }
+
+        mediaRecorder.start(1000);
+        document.getElementById("stopBtn").disabled = false;
+        document.getElementById("recordStatus").innerHTML =
+          "🔴 <strong>RECORDING IN PROGRESS...</strong><br>Capturing all meeting audio.<br>⚠ No live transcription.";
+        document.getElementById("recordStatus").classList.add("recording");
+        
+    } catch (err) {
+        console.error("Error:", err);
+        document.getElementById("recordStatus").innerHTML =
+          "❌ Error: " + err.message + "<br>Try Method 2 (Microphone Only) instead.";
+    }
+}
+
+async function startRecordingMicOnly(){
+    try {
+        document.getElementById("recordStatus").innerHTML = "⏳ Requesting microphone access...";
+        
+        recordingStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
+
+        let mimeType = 'audio/webm;codecs=opus';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'audio/webm';
+        
+        mediaRecorder = new MediaRecorder(recordingStream, { mimeType });
+        recordedChunks = [];
+        transcriptLines = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jitsi-mic-${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            document.getElementById("recordStatus").innerHTML = "✅ Recording and transcription saved!";
+            document.getElementById("recordStatus").classList.remove("recording");
+        };
+
+        const speechRec = initSpeechRecognition();
+        if (speechRec) {
+            isTranscribing = true;
+            speechRec.start();
+            document.getElementById('transcription').style.display = 'block';
+            document.getElementById('transcriptHistory').innerHTML = '';
+            document.getElementById('liveTranscript').textContent = 'Listening...';
+        }
+
+        mediaRecorder.start(1000);
+        document.getElementById("stopBtn").disabled = false;
+        document.getElementById("downloadBtn").disabled = false;
+        document.getElementById("recordStatus").innerHTML =
+          "🔴 <strong>RECORDING + TRANSCRIBING...</strong><br>⚠ Only your mic is captured.";
+        document.getElementById("recordStatus").classList.add("recording");
+        
+    } catch (err) {
+        console.error("Error:", err);
+        document.getElementById("recordStatus").innerHTML = "❌ Microphone access denied: " + err.message;
+    }
+}
+
+function stopRecording(){
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        if (recordingStream) recordingStream.getTracks().forEach(track => track.stop());
+        if (recognition) {
+            isTranscribing = false;
+            try { recognition.stop(); } catch(e) {}
+        }
+        document.getElementById("stopBtn").disabled = true;
+        document.getElementById("recordStatus").innerHTML = "⏹ Stopping and saving recording...";
+    }
+}
+
+function downloadTranscript() {
+    if (transcriptLines.length === 0) {
+        alert("No transcript available yet!");
+        return;
+    }
+    let text = "JITSI MEETING TRANSCRIPT\n";
+    text += "Generated: " + new Date().toLocaleString() + "\n";
+    text += "=".repeat(50) + "\n\n";
+    transcriptLines.forEach(line => {
+        text += `[${line.time}] ${line.text}\n\n`;
+    });
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert("✅ Transcript downloaded!");
+}
+</script>
+
+</body>
+</html>
